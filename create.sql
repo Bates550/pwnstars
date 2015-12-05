@@ -1,4 +1,4 @@
-DROP DATABASE PROJECT;
+DROP DATABASE project;
 CREATE DATABASE project;
 USE project;
 
