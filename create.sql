@@ -11,5 +11,3 @@ CREATE TABLE Employees(
 	salary longblob NOT NULL, # Bob Loblaw's LONGBLOB
 	PRIMARY KEY(id)
 );
-
-SELECT SUM_HE(salary) from Employees;
