@@ -8,7 +8,7 @@ CREATE AGGREGATE FUNCTION SUM_HE RETURNS STRING SONAME 'MyTest.so';
 CREATE TABLE Employees(
 	id INTEGER,
 	age INTEGER,
-	salary LONGBLOB NOT NULL, # Bob Loblaw's LONGBLOB
+	salary longblob NOT NULL, # Bob Loblaw's LONGBLOB
 	PRIMARY KEY(id)
 );
 
