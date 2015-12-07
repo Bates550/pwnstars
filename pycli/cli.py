@@ -90,7 +90,7 @@ class Client(cmd.Cmd):
 			)
 			execute(select_employee, {})
 			for (id, age, salary) in cursor:
-				print('{}, {}, {}'.format(id, age, decrypt(salary)))
+				print('{}, {}, {}'.format(id, age, decrypt(salary)[:-1]))
 
 			# If no employees exist
 			if (cursor.rowcount == -1):
@@ -100,30 +100,64 @@ class Client(cmd.Cmd):
 			if (length > 1):
 				# User entered 'SELECT SUM WHERE' and maybe more
 				if (uargs[1] == 'WHERE'):
-					# User entered 'SELECT SUM WHERE <condition> GROUP BY age'
+					# User entered 'SELECT SUM WHERE <condition> GROUP BY age' and maybe more
 					if ('GROUP' in uargs and 'BY' in uargs and
 							uargs.index('GROUP')+1 == uargs.index('BY') and
+							length >= uargs.index('BY')+2 and
 							args[uargs.index('BY')+1] == 'age'
 						):
-						#length >
-						condition = " ".join(args[2:uargs.index('GROUP')])
+						# User entered 'SELECT SUM WHERE <condition> GROUP BY age HAVING <condition>'
+						if ('HAVING' in uargs and
+								uargs.index('BY')+2 == uargs.index('HAVING') and
+								length >= uargs.index('HAVING')+2
+							):
+							where_condition = " ".join(args[2:uargs.index('GROUP')])
+							having_condition = " ".join(args[uargs.index('HAVING')+1:])
+							select_employee = (
+								"SELECT age, SUM_HE(salary) "
+								"FROM Employees "
+								"WHERE {} "
+								"GROUP BY age "
+								"HAVING {}".format(where_condition, having_condition)
+							)
+							execute(select_employee, {})
+							for (age, sum) in cursor:
+								print('{}, {}'.format(age, decrypt(sum)[:-1]))
+							if (cursor.rowcount == -1):
+								print('No employees met condition')
+						# User entered 'SELECT SUM WHERE <condition> GROUP BY age'
+						elif ('HAVING' not in uargs):
+							condition = " ".join(args[2:uargs.index('GROUP')])
+							select_employee = (
+								"SELECT age, SUM_HE(salary) "
+								"FROM Employees "
+								"WHERE {} "
+								"GROUP BY age".format(condition)
+							)
+							execute(select_employee, {})
+							for (age, sum) in cursor:
+								print('{}, {}'.format(age, decrypt(sum)[:-1]))
+							if (cursor.rowcount == -1):
+								print('No employees met condition')
+						else:
+							print('Invalid command: SELECT {}'.format(" ".join(args)))
+					# User entered 'SELECT SUM WHERE <condition>'
+					elif ('GROUP' not in uargs and
+							length > 2
+						):
+						condition = " ".join(args[2:])
 						select_employee = (
-							"SELECT age, SUM_HE(salary) "
+							"SELECT SUM_HE(salary) "
 							"FROM Employees "
-							"WHERE {} "
-							"GROUP BY age".format(condition)
+							"WHERE {}".format(condition)
 						)
 						execute(select_employee, {})
-						for (age, sum) in cursor:
-							print('{}, {}'.format(age, sum))
-						if (cursor.rowcount == -1):
-							print('No employees met condition: {}'.format(condition))
-					# User entered 'SELECT SUM WHERE <condition> GROUP BY age HAVING <condition>'
-					elif ():
-						pass
-					# User entered 'SELECT SUM WHERE <condition>'
-					elif ():
-						pass
+						for (sum) in cursor:
+							sum = sum[0].decode('utf-8')
+							#if (sum == '1'): # '1' is '0' encrypted apparently
+							#	print('NULL')
+							#else:
+							print(decrypt(sum)[:-1])
 					else:
 						print('Invalid command: SELECT {}'.format(" ".join(args)))
 				# User entered 'SELECT SUM GROUP BY age' and maybe more
@@ -165,7 +199,7 @@ class Client(cmd.Cmd):
 					if (sum == '1'): # '1' is '0' encrypted apparently
 						print('NULL')
 					else:
-						print(decrypt(sum))
+						print(decrypt(sum)[:-1])
 		# User entered: SELECT emp_id
 		elif (length == 1):
 			# Prepare values
@@ -179,7 +213,7 @@ class Client(cmd.Cmd):
 			)
 			execute(select_employee, values)
 			for (id, age, salary) in cursor:
-				print('{}, {}, {}'.format(id, age, decrypt(salary)))
+				print('{}, {}, {}'.format(id, age, decrypt(salary)[:-1]))
 
 			# If no employee with emp_id exists
 			if (cursor.rowcount == -1):
