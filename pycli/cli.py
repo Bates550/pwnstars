@@ -24,13 +24,14 @@ except mysql.connector.Error as err:
 
 def execute(query, values):
 	your_query = query % values
-	print("Executing: {} ... ".format(query % values), end="")
+	#print("Executing: {} ... ".format(query % values), end="")
 	try:
 		cursor.execute(query, values)
 	except mysql.connector.Error as err:
-		print("ERROR\nMySQL Error: {}\n".format(err))
+		print("MySQL Error: {}\n".format(err))
 	else:
-		print("Success")
+		#print("Success")
+		pass
 
 class Client(cmd.Cmd):
 	def __init__(self):
@@ -154,9 +155,6 @@ class Client(cmd.Cmd):
 						execute(select_employee, {})
 						for (sum) in cursor:
 							sum = sum[0].decode('utf-8')
-							#if (sum == '1'): # '1' is '0' encrypted apparently
-							#	print('NULL')
-							#else:
 							print(decrypt(sum)[:-1])
 					else:
 						print('Invalid command: SELECT {}'.format(" ".join(args)))
@@ -188,7 +186,6 @@ class Client(cmd.Cmd):
 					print('Invalid command: SELECT {}'.format(" ".join(args)))
 			# User entered 'SELECT SUM'
 			else:
-				print('SELECT SUM')
 				select_employee = (
 					"SELECT SUM_HE(salary) "
 					"FROM Employees"
@@ -200,7 +197,200 @@ class Client(cmd.Cmd):
 						print('NULL')
 					else:
 						print(decrypt(sum)[:-1])
-		# User entered: SELECT emp_id
+		# User entered 'SELECT AVG' and maybe more
+		elif (length >= 1 and uargs[0] == 'AVG'):
+			sums = {}
+			counts = {}
+			if (length > 1):
+				# User entered 'SELECT AVG WHERE' and maybe more
+				if (uargs[1] == 'WHERE'):
+					# User entered 'SELECT AVG WHERE <condition> GROUP BY age' and maybe more
+					if ('GROUP' in uargs and 'BY' in uargs and
+							uargs.index('GROUP')+1 == uargs.index('BY') and
+							length >= uargs.index('BY')+2 and
+							args[uargs.index('BY')+1] == 'age'
+						):
+						# User entered 'SELECT AVG WHERE <condition> GROUP BY age HAVING <condition>'
+						if ('HAVING' in uargs and
+								uargs.index('BY')+2 == uargs.index('HAVING') and
+								length >= uargs.index('HAVING')+2
+							):
+							where_condition = " ".join(args[2:uargs.index('GROUP')])
+							having_condition = " ".join(args[uargs.index('HAVING')+1:])
+							select_employee_sum = (
+								"SELECT age, SUM_HE(salary) "
+								"FROM Employees "
+								"WHERE {} "
+								"GROUP BY age "
+								"HAVING {}".format(where_condition, having_condition)
+							)
+							execute(select_employee_sum, {})
+							for (age, sum) in cursor:
+								sums[age] = decrypt(sum)[:-1]
+
+							if (cursor.rowcount == -1):
+								print('No employees met condition')
+								return
+
+							select_employee_count = (
+								"SELECT age, COUNT(salary) "
+								"FROM Employees "
+								"WHERE {} "
+								"GROUP BY age "
+								"HAVING {}".format(where_condition, having_condition)
+							)
+							execute(select_employee_count, {})
+							for (age, count) in cursor:
+								counts[age] = count
+
+							for age, sum in sums.items():
+								print('{}, {}'.format(age, float(sum)/float(counts[age])))
+						# User entered 'SELECT AVG WHERE <condition> GROUP BY age'
+						elif ('HAVING' not in uargs):
+							condition = " ".join(args[2:uargs.index('GROUP')])
+							sums = {}
+							counts = {}
+							select_employee_sum = (
+								"SELECT age, SUM_HE(salary) "
+								"FROM Employees "
+								"WHERE {} "
+								"GROUP BY age".format(condition)
+							)
+							execute(select_employee_sum, {})
+							for (age, sum) in cursor:
+								sums[age] = decrypt(sum)[:-1]
+
+							if (cursor.rowcount == -1):
+								print('No employees met condition')
+								return
+
+							select_employee_count = (
+								"SELECT age, COUNT(salary) "
+								"FROM Employees "
+								"WHERE {} "
+								"GROUP BY age".format(condition)
+							)
+							execute(select_employee_count, {})
+							for (age, count) in cursor:
+								counts[age] = count
+
+							for age, sum in sums.items():
+								print('{}, {}'.format(age, float(sum)/float(counts[age])))
+
+						else:
+							print('Invalid command: SELECT {}'.format(" ".join(args)))
+					# User entered 'SELECT AVG WHERE <condition>'
+					elif ('GROUP' not in uargs and
+							length > 2
+						):
+						condition = " ".join(args[2:])
+						select_employee_sum = (
+							"SELECT SUM_HE(salary) "
+							"FROM Employees "
+							"WHERE {}".format(condition)
+						)
+						execute(select_employee_sum, {})
+						for (sum) in cursor:
+							sum_result = decrypt(sum[0].decode('utf-8'))[:-1]
+
+						if (cursor.rowcount == -1):
+							print('No employees met condition')
+							return
+
+						select_employee_count = (
+							"SELECT COUNT(salary) "
+							"FROM Employees "
+							"WHERE {}".format(condition)
+						)
+						execute(select_employee_count, {})
+						for (count) in cursor:
+							count_result = count[0]
+						print('{}'.format(float(sum_result)/float(count_result)))
+					else:
+						print('Invalid command: SELECT {}'.format(" ".join(args)))
+				# User entered 'SELECT AVG GROUP BY age' and maybe more
+				elif (length > 3 and uargs[1] == 'GROUP' and uargs[2] == 'BY' and args[3] == 'age'):
+					# User entered 'SELECT AVG GROUP BY age'
+					if (length == 4):
+						select_employee_sum = (
+							"SELECT age, SUM_HE(salary) "
+							"FROM Employees "
+							"GROUP BY age"
+						)
+						execute(select_employee_sum, {})
+						for (age, sum) in cursor:
+							sums[age] = decrypt(sum)[:-1]
+
+						if (cursor.rowcount == -1):
+							print('No employees met condition')
+							return
+
+						select_employee_count = (
+							"SELECT age, COUNT(salary) "
+							"FROM Employees "
+							"GROUP BY age"
+						)
+						execute(select_employee_count, {})
+						for (age, count) in cursor:
+							counts[age] = count
+
+						for age, sum in sums.items():
+							print('{}, {}'.format(age, float(sum)/float(counts[age])))
+					# User entered 'SELECT AVG GROUP BY age HAVING <condition>'
+					elif (length > 5 and uargs[4] == 'HAVING'):
+						condition = " ".join(args[5:])
+						select_employee_sum = (
+							"SELECT age, SUM_HE(salary) "
+							"FROM Employees "
+							"GROUP BY age "
+							"HAVING {}".format(condition)
+						)
+						execute(select_employee_sum, {})
+						for (age, sum) in cursor:
+							sums[age] = decrypt(sum)[:-1]
+
+						if (cursor.rowcount == -1):
+							print('No employees met condition')
+							return
+
+						select_employee_count = (
+							"SELECT age, COUNT(salary) "
+							"FROM Employees "
+							"GROUP BY age "
+							"HAVING {}".format(condition)
+						)
+						execute(select_employee_count, {})
+						for (age, count) in cursor:
+							counts[age] = count
+
+						for age, sum in sums.items():
+							print('{}, {}'.format(age, float(sum)/float(counts[age])))
+				else:
+					print('Invalid command: SELECT {}'.format(" ".join(args)))
+			# User entered 'SELECT AVG'
+			else:
+				select_employee_sum = (
+					"SELECT SUM_HE(salary) "
+					"FROM Employees"
+				)
+				execute(select_employee_sum, {})
+				for (sum) in cursor:
+					sum = sum[0].decode('utf-8')
+					if (sum == '1'): # '1' is '0' encrypted apparently
+						print('NULL')
+					else:
+						sum_result = decrypt(sum)[:-1]
+
+				select_employee_count = (
+					"SELECT COUNT(salary) "
+					"FROM Employees"
+				)
+				execute(select_employee_count, {})
+				for (count) in cursor:
+					count_result = count[0]
+
+				print('{}'.format(float(sum_result)/float(count_result)))
+		# User entered 'SELECT emp_id'
 		elif (length == 1):
 			# Prepare values
 			values = {
@@ -257,7 +447,5 @@ def decrypt(ciphertext):
 if __name__ == '__main__':
 	Client().cmdloop()
 
-	# Commit data
-	#cnx.commit()
 	cursor.close()
 	cnx.close()
