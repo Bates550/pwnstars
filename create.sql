@@ -2,10 +2,8 @@ DROP DATABASE project;
 CREATE DATABASE project;
 USE project;
 
-
-CREATE FUNCTION MyTest
-RETURNS INTEGER SONAME 'hello.so';
-
+DROP FUNCTION SUM_HE;
+CREATE AGGREGATE FUNCTION SUM_HE RETURNS STRING SONAME 'MyTest.so';
 
 CREATE TABLE Employees(
 	id INTEGER,
@@ -14,8 +12,4 @@ CREATE TABLE Employees(
 	PRIMARY KEY(id)
 );
 
-INSERT INTO Employees VALUES(666, 20, 60000);
-
-SELECT age FROM Employees;
-
-SELECT MyTest(age) FROM Employees;
+SELECT SUM_HE(salary) from Employees;

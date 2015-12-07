@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <gmp.h>
-#include <paillier.h>
+#include "paillier.h"
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
